@@ -1,0 +1,1111 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>記帳本</title>
+  <style>
+* { box-sizing: border-box; }
+
+:root {
+  color-scheme: light;
+  --page: #f4f4f1;
+  --surface: #fcfcfb;
+  --surface-2: #efeee9;
+  --text: #0b0b0b;
+  --text-2: #52514e;
+  --muted: #898781;
+  --grid: #e1e0d9;
+  --axis: #c3c2b7;
+  --border: #e1e0d9;
+  --income: #006300;
+  --expense: #d03b3b;
+  --accent: #2a78d6;
+
+  /* 類別色：固定順序，跟著分類走 */
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a;
+  --s4: #eda100; --s5: #e87ba4; --s6: #008300;
+
+  /* 單色階（藍）：少 → 多 */
+  --q1: #cde2fb; --q2: #9ec5f4; --q3: #5598e7; --q4: #256abf; --q5: #104281;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page: #0d0d0d;
+    --surface: #1a1a19;
+    --surface-2: #262624;
+    --text: #f0efec;
+    --text-2: #c3c2b7;
+    --muted: #898781;
+    --grid: #2c2c2a;
+    --axis: #383835;
+    --border: #2c2c2a;
+    --income: #0ca30c;
+    --expense: #e66767;
+    --accent: #3987e5;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70;
+    --s4: #c98500; --s5: #d55181; --s6: #008300;
+    --q1: #0d366b; --q2: #184f95; --q3: #2a78d6; --q4: #6da7ec; --q5: #b7d3f6;
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0d0d0d;
+  --surface: #1a1a19;
+  --surface-2: #262624;
+  --text: #f0efec;
+  --text-2: #c3c2b7;
+  --muted: #898781;
+  --grid: #2c2c2a;
+  --axis: #383835;
+  --border: #2c2c2a;
+  --income: #0ca30c;
+  --expense: #e66767;
+  --accent: #3987e5;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70;
+  --s4: #c98500; --s5: #d55181; --s6: #008300;
+  --q1: #0d366b; --q2: #184f95; --q3: #2a78d6; --q4: #6da7ec; --q5: #b7d3f6;
+}
+
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--text);
+  font-family: -apple-system, "PingFang TC", "Microsoft JhengHei", sans-serif;
+}
+
+.container {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.header h1 { margin: 0; font-size: 1.6rem; }
+
+.filter { display: flex; align-items: center; gap: 8px; }
+
+.tools { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+
+.summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin: 16px 0 12px;
+}
+
+.card {
+  background: var(--surface);
+  border-radius: 8px;
+  padding: 12px;
+  text-align: center;
+}
+
+.card span { display: block; color: var(--text-2); font-size: 0.9rem; }
+.card strong { font-size: 1.3rem; word-break: break-all; }
+
+/* 趣味小統計 */
+.fun {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.fact {
+  background: var(--surface);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.fact .label { color: var(--text-2); font-size: 0.85rem; }
+.fact .value { font-size: 1.15rem; font-weight: bold; margin-top: 2px; word-break: break-all; }
+.fact .sub { color: var(--muted); font-size: 0.8rem; margin-top: 2px; }
+.fact .up { color: var(--expense); }
+.fact .down { color: var(--income); }
+
+.panel {
+  background: var(--surface);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+  min-width: 0;
+}
+
+.panel h2 { margin: 0 0 12px; font-size: 1.1rem; }
+.panel h2 small { color: var(--muted); font-weight: normal; font-size: 0.85rem; }
+
+.panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.legend { display: flex; gap: 12px; color: var(--text-2); font-size: 0.85rem; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.key { display: inline-block; width: 10px; height: 10px; border-radius: 2px; }
+
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.chart { width: 100%; }
+.chart svg { display: block; overflow: visible; }
+.chart text { fill: var(--muted); font-size: 11px; }
+.chart text.current { fill: var(--text); font-weight: bold; }
+.chart .gridline { stroke: var(--grid); stroke-width: 1; }
+.chart .baseline { stroke: var(--axis); stroke-width: 1; }
+.hit { fill: transparent; cursor: pointer; outline: none; }
+.hit:hover, .hit:focus-visible { fill: var(--text); fill-opacity: 0.05; }
+
+/* 甜甜圈 */
+.donut-wrap { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.donut-wrap svg { display: block; }
+.donut-wrap path { stroke: var(--surface); stroke-width: 2; cursor: pointer; outline: none; transition: opacity 0.15s; }
+.donut-wrap svg:hover path:not(:hover), .donut-wrap svg:focus-within path:not(:focus) { opacity: 0.45; }
+.donut-wrap .center-value { fill: var(--text); font-size: 16px; font-weight: bold; }
+.donut-wrap .center-label { fill: var(--muted); font-size: 11px; }
+
+.donut-legend { list-style: none; margin: 0; padding: 0; flex: 1; min-width: 160px; font-size: 0.9rem; }
+.donut-legend li {
+  display: grid;
+  grid-template-columns: 12px 1fr auto 40px;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+}
+.donut-legend .amt { color: var(--text); font-variant-numeric: tabular-nums; }
+.donut-legend .pct { color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+
+/* 每日熱力日曆 */
+.calendar {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+}
+
+.calendar .wd { text-align: center; color: var(--muted); font-size: 0.75rem; padding-bottom: 2px; }
+
+.calendar .day {
+  aspect-ratio: 1;
+  border-radius: 4px;
+  background: var(--surface-2);
+  font-size: 0.7rem;
+  color: var(--text-2);
+  padding: 3px;
+  cursor: default;
+  outline: none;
+}
+.calendar .day:hover, .calendar .day:focus-visible { box-shadow: 0 0 0 2px var(--text); }
+.calendar .blank { background: none; }
+.calendar .future { opacity: 0.4; }
+
+.lv1 { background: var(--q1) !important; }
+.lv2 { background: var(--q2) !important; }
+.lv3 { background: var(--q3) !important; }
+.lv4 { background: var(--q4) !important; }
+.lv5 { background: var(--q5) !important; }
+.calendar .day.lv3, .calendar .day.lv4, .calendar .day.lv5 { color: #fff; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .calendar .day.lv1,
+  :root:not([data-theme="light"]) .calendar .day.lv2 { color: #fff; }
+  :root:not([data-theme="light"]) .calendar .day.lv4,
+  :root:not([data-theme="light"]) .calendar .day.lv5 { color: #0b0b0b; }
+}
+:root[data-theme="dark"] .calendar .day.lv1,
+:root[data-theme="dark"] .calendar .day.lv2 { color: #fff; }
+:root[data-theme="dark"] .calendar .day.lv4,
+:root[data-theme="dark"] .calendar .day.lv5 { color: #0b0b0b; }
+
+#theme-toggle { margin-left: auto; }
+
+.calendar-scale {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 3px;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+.calendar-scale i { width: 12px; height: 12px; border-radius: 2px; }
+.calendar-scale span { margin: 0 4px; }
+
+/* Tooltip */
+.tooltip {
+  position: fixed;
+  z-index: 10;
+  pointer-events: none;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 0.85rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  min-width: 120px;
+}
+.tooltip .tt-title { color: var(--muted); font-size: 0.8rem; margin-bottom: 4px; }
+.tooltip .tt-row { display: flex; align-items: center; gap: 8px; }
+.tooltip .tt-key { width: 12px; height: 2px; border-radius: 1px; flex-shrink: 0; }
+.tooltip .tt-row strong { font-variant-numeric: tabular-nums; }
+.tooltip .tt-row span { color: var(--text-2); }
+
+/* 表單 */
+form {
+  display: grid;
+  grid-template-columns: 80px 1fr 1fr 1fr;
+  gap: 8px;
+}
+
+form #note { grid-column: 1 / 4; }
+
+input, select, button {
+  font: inherit;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  min-width: 0;
+  background: var(--surface);
+  color: var(--text);
+}
+
+button {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+}
+
+button.ghost {
+  background: none;
+  color: var(--text-2);
+  border: 1px solid var(--border);
+  padding: 4px 10px;
+  font-size: 0.85rem;
+}
+
+.error { color: var(--expense); margin: 8px 0 0; min-height: 1em; }
+
+.income { color: var(--income); }
+.expense { color: var(--expense); }
+
+/* 紀錄列表 */
+.record-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.record-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.record-list .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.record-list .date { color: var(--muted); width: 48px; flex-shrink: 0; }
+.record-list .category { flex-shrink: 0; }
+.record-list .note { flex: 1; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.record-list .amount { font-weight: bold; font-variant-numeric: tabular-nums; }
+
+.record-list .delete {
+  background: none;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  padding: 4px 8px;
+}
+
+.empty { color: var(--muted); margin: 0; }
+
+@media (max-width: 720px) {
+  .fun { grid-template-columns: repeat(2, 1fr); }
+  .two-col { grid-template-columns: 1fr; gap: 0; }
+}
+
+@media (max-width: 480px) {
+  form { grid-template-columns: 1fr; }
+  form #note { grid-column: auto; }
+  .summary { gap: 8px; }
+  .card strong { font-size: 1rem; }
+  .fun { gap: 8px; }
+  .record-list li { gap: 8px; }
+}
+  </style>
+</head>
+<body>
+  <main class="container">
+    <header class="header">
+      <h1>記帳本</h1>
+      <div class="filter">
+        <input type="month" id="month-filter" aria-label="月份">
+        <label><input type="checkbox" id="show-all"> 全部</label>
+      </div>
+    </header>
+    <div class="tools">
+      <button type="button" id="load-demo" class="ghost">重新產生模擬資料</button>
+      <button type="button" id="clear-all" class="ghost">清空全部</button>
+      <button type="button" id="theme-toggle" class="ghost"></button>
+    </div>
+
+    <section class="summary">
+      <div class="card"><span>收入</span><strong id="total-income" class="income">$0</strong></div>
+      <div class="card"><span>支出</span><strong id="total-expense" class="expense">$0</strong></div>
+      <div class="card"><span>餘額</span><strong id="balance">$0</strong></div>
+    </section>
+
+    <section class="fun" id="fun-facts" aria-label="趣味小統計"></section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>近六個月收支</h2>
+        <div class="legend">
+          <span><i class="key" style="background: var(--s1)"></i>收入</span>
+          <span><i class="key" style="background: var(--s2)"></i>支出</span>
+        </div>
+      </div>
+      <div id="monthly-chart" class="chart"></div>
+    </section>
+
+    <div class="two-col">
+      <section class="panel">
+        <h2>支出分類</h2>
+        <div class="donut-wrap">
+          <div id="donut-chart"></div>
+          <ul id="donut-legend" class="donut-legend"></ul>
+        </div>
+        <p id="stats-empty" class="empty">目前沒有支出</p>
+      </section>
+
+      <section class="panel">
+        <h2 id="calendar-title">每日支出</h2>
+        <div id="calendar" class="calendar"></div>
+        <div class="calendar-scale">
+          <span>少</span>
+          <i class="lv1"></i><i class="lv2"></i><i class="lv3"></i><i class="lv4"></i><i class="lv5"></i>
+          <span>多</span>
+        </div>
+      </section>
+    </div>
+
+    <section class="panel">
+      <h2>新增紀錄</h2>
+      <form id="record-form" novalidate>
+        <select id="type" aria-label="類型">
+          <option value="expense">支出</option>
+          <option value="income">收入</option>
+        </select>
+        <input type="number" id="amount" placeholder="金額" min="1" step="1" aria-label="金額">
+        <select id="category" aria-label="分類"></select>
+        <input type="date" id="date" aria-label="日期">
+        <input type="text" id="note" placeholder="備註（選填）" maxlength="50" aria-label="備註">
+        <button type="submit">新增</button>
+      </form>
+      <p id="error" class="error" role="alert"></p>
+    </section>
+
+    <section class="panel">
+      <h2>紀錄列表 <small id="record-count"></small></h2>
+      <ul id="record-list" class="record-list"></ul>
+      <p id="empty" class="empty">目前沒有紀錄</p>
+    </section>
+  </main>
+
+  <div id="tooltip" class="tooltip" role="tooltip" hidden></div>
+
+  <script>
+// 產生近六個月的模擬記帳資料
+function generateDemoData() {
+  const records = [];
+  let n = 0;
+
+  const pad = (v) => String(v).padStart(2, '0');
+  const fmt = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const rand = (min, max) => Math.round(min + Math.random() * (max - min));
+  const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+  const chance = (p) => Math.random() < p;
+
+  const add = (type, amount, category, date, note) => {
+    records.push({ id: `demo-${pad(n++).padStart(5, '0')}`, type, amount, category, date, note });
+  };
+
+  const end = new Date();
+  const start = new Date(end.getFullYear(), end.getMonth() - 5, 1);
+  const bonusMonth = (start.getMonth() + 3) % 12;
+
+  for (const d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    const date = fmt(d);
+    const day = d.getDate();
+    const weekend = d.getDay() === 0 || d.getDay() === 6;
+
+    // 收入
+    if (day === 5) add('income', 42000, '薪資', date, `${d.getMonth() + 1}月薪水`);
+    if (day === 20 && d.getMonth() === bonusMonth) add('income', 12000, '獎金', date, '績效獎金');
+    if (chance(0.03)) add('income', rand(200, 1500), '其他', date, pick(['二手拍賣', '家教', '發票中獎']));
+
+    // 居住
+    if (day === 1) add('expense', 12000, '居住', date, '房租');
+    if (day === 15) add('expense', rand(800, 1600), '居住', date, '水電瓦斯');
+
+    // 餐飲
+    if (chance(0.7)) add('expense', rand(40, 90), '餐飲', date, pick(['蛋餅豆漿', '飯糰', '三明治', '漢堡奶茶']));
+    if (chance(0.95)) add('expense', rand(80, 180), '餐飲', date, pick(['便當', '牛肉麵', '自助餐', '滷肉飯', '義大利麵']));
+    if (chance(0.9)) add('expense', weekend ? rand(200, 600) : rand(90, 250), '餐飲', date,
+      weekend ? pick(['火鍋', '燒肉', '早午餐', '居酒屋']) : pick(['拉麵', '滷味', '鹹酥雞', '水餃', '小吃']));
+    if (chance(0.45)) add('expense', rand(50, 75), '餐飲', date, pick(['珍珠奶茶', '咖啡', '紅茶拿鐵']));
+
+    // 交通
+    if (!weekend && chance(0.85)) add('expense', rand(30, 60), '交通', date, pick(['捷運', '公車', 'YouBike']));
+    if (weekend && chance(0.2)) add('expense', rand(150, 400), '交通', date, pick(['計程車', '高鐵', '加油']));
+
+    // 娛樂
+    if (weekend && chance(0.5)) add('expense', rand(250, 900), '娛樂', date, pick(['電影', 'KTV', '桌遊', '展覽', '密室逃脫']));
+    if (day === 10) add('expense', 390, '娛樂', date, '串流訂閱');
+
+    // 購物
+    if (chance(0.12)) add('expense', rand(150, 2500), '購物', date, pick(['衣服', '蝦皮', '書', '生活用品', '3C 配件']));
+
+    // 其他
+    if (chance(0.05)) add('expense', rand(100, 800), '其他', date, pick(['禮物', '看醫生', '剪頭髮', '紅包']));
+  }
+
+  return records;
+}
+
+// 手繪 SVG 圖表（不需外部套件）
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+function svgEl(tag, attrs, parent) {
+  const node = document.createElementNS(SVG_NS, tag);
+  for (const [k, v] of Object.entries(attrs || {})) node.setAttribute(k, v);
+  if (parent) parent.appendChild(node);
+  return node;
+}
+
+function money(n) {
+  return '$' + Math.round(n).toLocaleString('zh-TW');
+}
+
+function compactMoney(n) {
+  if (n >= 10000) return (n / 10000).toFixed(n % 10000 === 0 ? 0 : 1) + '萬';
+  return n.toLocaleString('zh-TW');
+}
+
+// ---------- Tooltip ----------
+const tip = document.getElementById('tooltip');
+
+// rows: [{ value, label, color }]
+function showTip(title, rows, x, y) {
+  tip.replaceChildren();
+  const t = document.createElement('div');
+  t.className = 'tt-title';
+  t.textContent = title;
+  tip.appendChild(t);
+  for (const r of rows) {
+    const row = document.createElement('div');
+    row.className = 'tt-row';
+    if (r.color) {
+      const key = document.createElement('i');
+      key.className = 'tt-key';
+      key.style.background = r.color;
+      row.appendChild(key);
+    }
+    const strong = document.createElement('strong');
+    strong.textContent = r.value;
+    const label = document.createElement('span');
+    label.textContent = r.label;
+    row.append(strong, label);
+    tip.appendChild(row);
+  }
+  tip.hidden = false;
+  const w = tip.offsetWidth;
+  const h = tip.offsetHeight;
+  let left = x + 14;
+  let top = y + 14;
+  if (left + w > window.innerWidth - 8) left = x - w - 14;
+  if (top + h > window.innerHeight - 8) top = y - h - 14;
+  tip.style.left = Math.max(8, left) + 'px';
+  tip.style.top = Math.max(8, top) + 'px';
+}
+
+function hideTip() {
+  tip.hidden = true;
+}
+
+// 讓元素在滑鼠移動與鍵盤聚焦時都會顯示 tooltip
+function bindTip(node, getContent) {
+  node.setAttribute('tabindex', '0');
+  node.addEventListener('pointermove', (e) => {
+    const [title, rows] = getContent();
+    showTip(title, rows, e.clientX, e.clientY);
+  });
+  node.addEventListener('pointerleave', hideTip);
+  node.addEventListener('focus', () => {
+    const rect = node.getBoundingClientRect();
+    const [title, rows] = getContent();
+    showTip(title, rows, rect.left + rect.width / 2, rect.top + rect.height / 2);
+  });
+  node.addEventListener('blur', hideTip);
+}
+
+// 頂端圓角、底部貼齊基線的長條
+function barPath(x, y, w, h) {
+  const r = Math.min(4, w / 2, h);
+  return `M${x},${y + h} V${y + r} Q${x},${y} ${x + r},${y} H${x + w - r} Q${x + w},${y} ${x + w},${y + r} V${y + h} Z`;
+}
+
+function niceMax(v) {
+  if (v <= 0) return 1000;
+  const mag = Math.pow(10, Math.floor(Math.log10(v)));
+  for (const step of [1, 2, 2.5, 5, 10]) {
+    if (step * mag >= v) return step * mag;
+  }
+  return 10 * mag;
+}
+
+// ---------- 近六個月收支：分組長條圖 ----------
+// months: [{ key, label, income, expense, current }]
+function renderMonthlyChart(container, months) {
+  container.replaceChildren();
+  const width = Math.max(container.clientWidth, 280);
+  const height = 220;
+  const m = { top: 12, right: 4, bottom: 26, left: 44 };
+  const innerW = width - m.left - m.right;
+  const innerH = height - m.top - m.bottom;
+
+  const max = niceMax(Math.max(...months.flatMap((d) => [d.income, d.expense])));
+  const y = (v) => m.top + innerH - (v / max) * innerH;
+
+  const svg = svgEl('svg', { width, height, role: 'img', 'aria-label': '近六個月收入與支出長條圖' }, container);
+
+  for (let i = 0; i <= 4; i++) {
+    const v = (max / 4) * i;
+    const yy = y(v);
+    if (i > 0) svgEl('line', { class: 'gridline', x1: m.left, x2: width - m.right, y1: yy, y2: yy }, svg);
+    const label = svgEl('text', { x: m.left - 8, y: yy + 4, 'text-anchor': 'end' }, svg);
+    label.textContent = compactMoney(v);
+  }
+
+  const band = innerW / months.length;
+  const barW = Math.min(28, band * 0.3);
+  const gap = 2;
+
+  months.forEach((d, i) => {
+    const cx = m.left + band * i + band / 2;
+    const bars = [
+      { v: d.income, x: cx - gap / 2 - barW, color: 'var(--s1)' },
+      { v: d.expense, x: cx + gap / 2, color: 'var(--s2)' },
+    ];
+    for (const b of bars) {
+      if (b.v <= 0) continue;
+      const h = Math.max(1, innerH - (y(b.v) - m.top));
+      svgEl('path', { d: barPath(b.x, y(b.v), barW, h), fill: b.color }, svg);
+    }
+
+    const label = svgEl('text', { x: cx, y: height - 8, 'text-anchor': 'middle', class: d.current ? 'current' : '' }, svg);
+    label.textContent = d.label;
+
+    // 命中區比長條大：整個月份欄位
+    const hit = svgEl('rect', {
+      class: 'hit', x: m.left + band * i, y: m.top, width: band, height: innerH, rx: 4,
+      'aria-label': `${d.label} 收入 ${money(d.income)}，支出 ${money(d.expense)}`,
+    }, svg);
+    bindTip(hit, () => [d.title, [
+      { value: money(d.income), label: '收入', color: 'var(--s1)' },
+      { value: money(d.expense), label: '支出', color: 'var(--s2)' },
+      { value: money(d.income - d.expense), label: '結餘' },
+    ]]);
+  });
+
+  svgEl('line', { class: 'baseline', x1: m.left, x2: width - m.right, y1: m.top + innerH, y2: m.top + innerH }, svg);
+}
+
+// ---------- 支出分類：甜甜圈圖 ----------
+// data: [{ name, value, color }]，依固定分類順序傳入
+function renderDonut(container, legend, data) {
+  container.replaceChildren();
+  legend.replaceChildren();
+  const items = data.filter((d) => d.value > 0);
+  const total = items.reduce((s, d) => s + d.value, 0);
+  if (!total) return false;
+
+  const size = 180;
+  const c = size / 2;
+  const R = 84;
+  const r = 56;
+  const svg = svgEl('svg', { width: size, height: size, role: 'img', 'aria-label': '支出分類甜甜圈圖' }, container);
+
+  const point = (radius, angle) => [c + radius * Math.sin(angle), c - radius * Math.cos(angle)];
+  let start = 0;
+
+  for (const d of items) {
+    const sweep = (d.value / total) * Math.PI * 2;
+    const end = start + Math.min(sweep, Math.PI * 2 - 0.0001);
+    const large = end - start > Math.PI ? 1 : 0;
+    const [x1, y1] = point(R, start);
+    const [x2, y2] = point(R, end);
+    const [x3, y3] = point(r, end);
+    const [x4, y4] = point(r, start);
+    const path = svgEl('path', {
+      d: `M${x1},${y1} A${R},${R} 0 ${large} 1 ${x2},${y2} L${x3},${y3} A${r},${r} 0 ${large} 0 ${x4},${y4} Z`,
+      fill: d.color,
+      'aria-label': `${d.name} ${money(d.value)}`,
+    }, svg);
+    const pct = Math.round((d.value / total) * 100);
+    bindTip(path, () => [d.name, [{ value: money(d.value), label: `佔 ${pct}%`, color: d.color }]]);
+    start += sweep;
+  }
+
+  const v = svgEl('text', { x: c, y: c + 2, 'text-anchor': 'middle', class: 'center-value' }, svg);
+  v.textContent = money(total);
+  const l = svgEl('text', { x: c, y: c + 20, 'text-anchor': 'middle', class: 'center-label' }, svg);
+  l.textContent = '總支出';
+
+  // 圖例兼數字表：每個分類都看得到金額與佔比
+  for (const d of items) {
+    const li = document.createElement('li');
+    const key = document.createElement('i');
+    key.className = 'key';
+    key.style.background = d.color;
+    const name = document.createElement('span');
+    name.textContent = d.name;
+    const amt = document.createElement('span');
+    amt.className = 'amt';
+    amt.textContent = money(d.value);
+    const pct = document.createElement('span');
+    pct.className = 'pct';
+    pct.textContent = Math.round((d.value / total) * 100) + '%';
+    li.append(key, name, amt, pct);
+    legend.appendChild(li);
+  }
+  return true;
+}
+
+// ---------- 每日支出：熱力日曆 ----------
+// monthKey: 'YYYY-MM'，daily: { 'YYYY-MM-DD': { total, top } }
+function renderCalendar(container, monthKey, daily, todayStr) {
+  container.replaceChildren();
+  for (const w of ['日', '一', '二', '三', '四', '五', '六']) {
+    const h = document.createElement('div');
+    h.className = 'wd';
+    h.textContent = w;
+    container.appendChild(h);
+  }
+
+  const [yy, mm] = monthKey.split('-').map(Number);
+  const firstWeekday = new Date(yy, mm - 1, 1).getDay();
+  const days = new Date(yy, mm, 0).getDate();
+  // 用百分位數分 5 級，避免房租那種大額日把其他天都壓成最淺色
+  const sorted = Object.values(daily).map((d) => d.total).filter((v) => v > 0).sort((a, b) => a - b);
+  const cuts = [0.2, 0.4, 0.6, 0.8].map((p) => sorted[Math.floor(p * (sorted.length - 1))]);
+  const level = (v) => 1 + cuts.filter((c) => v > c).length;
+
+  for (let i = 0; i < firstWeekday; i++) {
+    const blank = document.createElement('div');
+    blank.className = 'day blank';
+    container.appendChild(blank);
+  }
+
+  for (let day = 1; day <= days; day++) {
+    const date = `${monthKey}-${String(day).padStart(2, '0')}`;
+    const info = daily[date] || { total: 0, top: null };
+    const cell = document.createElement('div');
+    cell.className = 'day';
+    cell.textContent = day;
+    if (date > todayStr) cell.classList.add('future');
+    if (info.total > 0) cell.classList.add('lv' + level(info.total));
+    cell.setAttribute('aria-label', `${mm}月${day}日 支出 ${money(info.total)}`);
+    bindTip(cell, () => {
+      const rows = [{ value: money(info.total), label: '當日支出' }];
+      if (info.top) rows.push({ value: money(info.top.amount), label: `最大筆：${info.top.category}${info.top.note ? '・' + info.top.note : ''}` });
+      return [`${mm}月${day}日`, rows];
+    });
+    container.appendChild(cell);
+  }
+}
+
+const STORAGE_KEY = 'ledger-records';
+
+const CATEGORIES = {
+  expense: ['餐飲', '交通', '購物', '娛樂', '居住', '其他'],
+  income: ['薪資', '獎金', '其他'],
+};
+
+// 每個支出分類固定一個顏色，不會因為排序或篩選而換色
+const CATEGORY_COLORS = {
+  餐飲: 'var(--s1)', 交通: 'var(--s2)', 購物: 'var(--s3)',
+  娛樂: 'var(--s4)', 居住: 'var(--s5)', 其他: 'var(--s6)',
+};
+
+const $ = (id) => document.getElementById(id);
+
+const form = $('record-form');
+const typeEl = $('type');
+const amountEl = $('amount');
+const categoryEl = $('category');
+const dateEl = $('date');
+const noteEl = $('note');
+const errorEl = $('error');
+const monthFilter = $('month-filter');
+const showAll = $('show-all');
+
+let records = loadRecords();
+
+// 第一次打開（還沒有任何資料）時自動放入模擬資料
+function loadRecords() {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (raw === null) {
+    const demo = generateDemoData();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(demo));
+    return demo;
+  }
+  try {
+    const data = JSON.parse(raw);
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveRecords() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+}
+
+function dateStr(d) {
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+function today() {
+  return dateStr(new Date());
+}
+
+function shiftMonth(monthKey, delta) {
+  const [y, m] = monthKey.split('-').map(Number);
+  return dateStr(new Date(y, m - 1 + delta, 1)).slice(0, 7);
+}
+
+function formatMoney(n) {
+  return '$' + Math.round(n).toLocaleString('zh-TW');
+}
+
+function sumBy(list, type) {
+  return list.filter((r) => r.type === type).reduce((s, r) => s + r.amount, 0);
+}
+
+function fillCategories() {
+  categoryEl.innerHTML = '';
+  for (const name of CATEGORIES[typeEl.value]) {
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = name;
+    categoryEl.appendChild(opt);
+  }
+}
+
+function inMonth(monthKey) {
+  return records.filter((r) => r.date.startsWith(monthKey));
+}
+
+function getFiltered() {
+  return showAll.checked ? records : inMonth(monthFilter.value);
+}
+
+function renderSummary(list) {
+  const income = sumBy(list, 'income');
+  const expense = sumBy(list, 'expense');
+  const balance = income - expense;
+  $('total-income').textContent = formatMoney(income);
+  $('total-expense').textContent = formatMoney(expense);
+  const balanceEl = $('balance');
+  balanceEl.textContent = (balance < 0 ? '-' : '') + formatMoney(Math.abs(balance));
+  balanceEl.className = balance < 0 ? 'expense' : '';
+}
+
+function renderFunFacts(list) {
+  const box = $('fun-facts');
+  box.replaceChildren();
+  const expenses = list.filter((r) => r.type === 'expense');
+  const total = expenses.reduce((s, r) => s + r.amount, 0);
+
+  // 統計天數：單月用「該月已過的天數」，全部則用第一筆到最後一筆的天數
+  let days;
+  if (showAll.checked) {
+    const dates = list.map((r) => r.date).sort();
+    days = dates.length ? Math.round((new Date(dates.at(-1)) - new Date(dates[0])) / 86400000) + 1 : 1;
+  } else {
+    const [y, m] = monthFilter.value.split('-').map(Number);
+    const daysInMonth = new Date(y, m, 0).getDate();
+    days = monthFilter.value === today().slice(0, 7) ? new Date().getDate() : daysInMonth;
+  }
+
+  const biggest = expenses.reduce((a, r) => (!a || r.amount > a.amount ? r : a), null);
+
+  const byCat = {};
+  for (const r of expenses) byCat[r.category] = (byCat[r.category] || 0) + r.amount;
+  // 最愛分類排除房租這種固定支出，比較有趣
+  const fav = Object.entries(byCat).filter(([c]) => c !== '居住').sort((a, b) => b[1] - a[1])[0];
+
+  const drinks = expenses.filter((r) => /奶茶|咖啡|拿鐵/.test(r.note));
+
+  let compare = '';
+  let compareClass = '';
+  if (!showAll.checked) {
+    // 本月還沒過完時，只跟上個月「同期」（1 號到今天的日期）比
+    const isCurrent = monthFilter.value === today().slice(0, 7);
+    const cutoff = new Date().getDate();
+    const prevList = inMonth(shiftMonth(monthFilter.value, -1))
+      .filter((r) => !isCurrent || Number(r.date.slice(8)) <= cutoff);
+    const prev = sumBy(prevList, 'expense');
+    if (prev > 0) {
+      const pct = Math.round(((total - prev) / prev) * 100);
+      compare = `比上月${isCurrent ? '同期' : ''}${pct >= 0 ? '多' : '少'} ${Math.abs(pct)}%`;
+      compareClass = pct > 0 ? 'up' : 'down';
+    }
+  }
+
+  const facts = [
+    {
+      label: '最大筆支出',
+      value: biggest ? formatMoney(biggest.amount) : '—',
+      sub: biggest ? `${biggest.category}${biggest.note ? '・' + biggest.note : ''}` : '還沒有支出',
+    },
+    {
+      label: '最愛花錢在',
+      value: fav ? fav[0] : '—',
+      sub: fav && total ? `${formatMoney(fav[1])}，佔 ${Math.round((fav[1] / total) * 100)}%` : '',
+    },
+    {
+      label: '平均每天花',
+      value: formatMoney(total / Math.max(days, 1)),
+      sub: compare, subClass: compareClass,
+    },
+    {
+      label: '手搖飲 & 咖啡',
+      value: `${drinks.length} 杯`,
+      sub: drinks.length ? `花了 ${formatMoney(drinks.reduce((s, r) => s + r.amount, 0))}` : '很自律！',
+    },
+  ];
+
+  for (const f of facts) {
+    const div = document.createElement('div');
+    div.className = 'fact';
+    for (const [cls, text] of [['label', f.label], ['value', f.value], ['sub', f.sub]]) {
+      const el = document.createElement('div');
+      el.className = cls;
+      el.textContent = text;
+      if (cls === 'sub' && f.subClass) el.classList.add(f.subClass);
+      div.appendChild(el);
+    }
+    box.appendChild(div);
+  }
+}
+
+function renderCharts(list) {
+  // 近六個月：以選擇的月份為結尾
+  const months = [];
+  for (let i = 5; i >= 0; i--) {
+    const key = shiftMonth(monthFilter.value, -i);
+    const rs = inMonth(key);
+    const [y, m] = key.split('-').map(Number);
+    months.push({
+      key,
+      label: `${m}月`,
+      title: `${y}年${m}月`,
+      income: sumBy(rs, 'income'),
+      expense: sumBy(rs, 'expense'),
+      current: i === 0 && !showAll.checked,
+    });
+  }
+  renderMonthlyChart($('monthly-chart'), months);
+
+  // 支出分類（跟著目前篩選範圍）
+  const byCat = CATEGORIES.expense.map((name) => ({
+    name,
+    color: CATEGORY_COLORS[name],
+    value: list.filter((r) => r.type === 'expense' && r.category === name).reduce((s, r) => s + r.amount, 0),
+  }));
+  const hasData = renderDonut($('donut-chart'), $('donut-legend'), byCat);
+  $('stats-empty').style.display = hasData ? 'none' : 'block';
+
+  // 每日熱力日曆（選擇的月份）
+  const monthKey = monthFilter.value;
+  const [y, m] = monthKey.split('-').map(Number);
+  $('calendar-title').textContent = `${y}年${m}月 每日支出`;
+  const daily = {};
+  for (const r of inMonth(monthKey)) {
+    if (r.type !== 'expense') continue;
+    const d = (daily[r.date] ||= { total: 0, top: null });
+    d.total += r.amount;
+    if (!d.top || r.amount > d.top.amount) d.top = r;
+  }
+  renderCalendar($('calendar'), monthKey, daily, today());
+}
+
+function renderList(list) {
+  const ul = $('record-list');
+  ul.innerHTML = '';
+  const sorted = [...list].sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
+
+  for (const r of sorted) {
+    const li = document.createElement('li');
+    const [, m, d] = r.date.split('-');
+
+    const dot = document.createElement('i');
+    dot.className = 'dot';
+    dot.style.background = r.type === 'expense' ? CATEGORY_COLORS[r.category] : 'transparent';
+
+    const date = document.createElement('span');
+    date.className = 'date';
+    date.textContent = `${Number(m)}/${Number(d)}`;
+
+    const category = document.createElement('span');
+    category.className = 'category';
+    category.textContent = r.category;
+
+    const note = document.createElement('span');
+    note.className = 'note';
+    note.textContent = r.note;
+
+    const amount = document.createElement('span');
+    amount.className = 'amount ' + r.type;
+    amount.textContent = (r.type === 'income' ? '+' : '-') + r.amount.toLocaleString('zh-TW');
+
+    const del = document.createElement('button');
+    del.className = 'delete';
+    del.textContent = '刪除';
+    del.addEventListener('click', () => deleteRecord(r.id));
+
+    li.append(dot, date, category, note, amount, del);
+    ul.appendChild(li);
+  }
+
+  $('record-count').textContent = sorted.length ? `（${sorted.length} 筆）` : '';
+  $('empty').style.display = sorted.length ? 'none' : 'block';
+}
+
+function render() {
+  monthFilter.disabled = showAll.checked;
+  const list = getFiltered();
+  renderSummary(list);
+  renderFunFacts(list);
+  renderCharts(list);
+  renderList(list);
+}
+
+function deleteRecord(id) {
+  if (!confirm('確定要刪除這筆紀錄嗎？')) return;
+  records = records.filter((r) => r.id !== id);
+  saveRecords();
+  render();
+}
+
+form.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const amount = Number(amountEl.value);
+
+  if (!amountEl.value || !Number.isInteger(amount) || amount <= 0) {
+    errorEl.textContent = '請輸入大於 0 的整數金額';
+    return;
+  }
+  if (!dateEl.value) {
+    errorEl.textContent = '請選擇日期';
+    return;
+  }
+
+  records.push({
+    id: String(Date.now()),
+    type: typeEl.value,
+    amount,
+    category: categoryEl.value,
+    date: dateEl.value,
+    note: noteEl.value.trim().slice(0, 50),
+  });
+  saveRecords();
+
+  errorEl.textContent = '';
+  amountEl.value = '';
+  noteEl.value = '';
+  dateEl.value = today();
+  render();
+});
+
+$('load-demo').addEventListener('click', () => {
+  if (!confirm('會用新的模擬資料取代目前所有紀錄，確定嗎？')) return;
+  records = generateDemoData();
+  saveRecords();
+  render();
+});
+
+$('clear-all').addEventListener('click', () => {
+  if (!confirm('確定要刪除全部紀錄嗎？')) return;
+  records = [];
+  saveRecords();
+  render();
+});
+
+// 深色 / 淺色切換：記住使用者的選擇，沒選過就跟隨系統
+const THEME_KEY = 'ledger-theme';
+const themeBtn = $('theme-toggle');
+
+function currentTheme() {
+  return document.documentElement.dataset.theme
+    || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+}
+
+function updateThemeButton() {
+  themeBtn.textContent = currentTheme() === 'dark' ? '切換淺色' : '切換深色';
+}
+
+try {
+  const saved = localStorage.getItem(THEME_KEY);
+  if (saved) document.documentElement.dataset.theme = saved;
+} catch {}
+
+themeBtn.addEventListener('click', () => {
+  const next = currentTheme() === 'dark' ? 'light' : 'dark';
+  document.documentElement.dataset.theme = next;
+  try { localStorage.setItem(THEME_KEY, next); } catch {}
+  updateThemeButton();
+});
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', updateThemeButton);
+updateThemeButton();
+
+typeEl.addEventListener('change', fillCategories);
+monthFilter.addEventListener('change', () => {
+  if (!monthFilter.value) monthFilter.value = today().slice(0, 7);
+  render();
+});
+showAll.addEventListener('change', render);
+
+let resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => renderCharts(getFiltered()), 150);
+});
+
+fillCategories();
+dateEl.value = today();
+monthFilter.value = today().slice(0, 7);
+render();
+  </script>
+</body>
+</html>
